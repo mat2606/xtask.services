@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Serviços para tarefas da Sala do Futuro com pedido rápido e atendimento pelo WhatsApp.">
+  <meta name="theme-color" content="#725cff">
+  <title>Nota Certa | Sala do Futuro</title>
+  <link rel="preconnect" href="https://www.gstatic.com">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="announcement"><span></span><b id="announcement">Pedidos abertos • Atendimento todos os dias</b></div>
+  <header class="header">
+    <div class="shell header-inner">
+      <a class="brand" href="#inicio"><i>✓</i><strong id="brand">Nota Certa</strong></a>
+      <nav id="menu"><a href="#servicos">Serviços</a><a href="#como-funciona">Como funciona</a><a href="#duvidas">Dúvidas</a></nav>
+      <div class="header-actions"><button class="icon-button" id="themeButton" type="button" aria-label="Alternar tema">☾</button><a class="button desktop-button" href="#servicos">Fazer pedido <span>→</span></a><button class="icon-button menu-button" id="menuButton" type="button" aria-label="Abrir menu">☰</button></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero shell" id="inicio">
+      <div class="hero-copy">
+        <span class="eyebrow" id="heroEyebrow">✦ ATENDIMENTO RÁPIDO E SEGURO</span>
+        <h1 id="heroTitle">Suas tarefas em dia, sem complicação.</h1>
+        <p id="heroSubtitle">Escolha o serviço, envie os detalhes e receba a confirmação direto no WhatsApp. Preço claro antes de pedir.</p>
+        <div class="hero-actions"><a class="button large" href="#servicos">Ver serviços <span>→</span></a><small>● Resposta pelo WhatsApp</small></div>
+        <div class="proof"><div><i>✓</i><i>★</i><i>☺</i></div><p><strong>Pedido simples e transparente</strong><br>Você confere tudo antes de enviar</p></div>
+      </div>
+      <div class="hero-visual">
+        <div class="grid-lines"></div>
+        <div class="browser-card">
+          <div class="browser-top"><i></i><i></i><i></i><small>pedido.novacerta</small></div>
+          <div class="browser-body"><span class="status">● Pedido recebido</span><div class="success-icon">✓</div><h2>Tudo certo por aqui.</h2><p>Seu pedido sobe no painel e a conversa continua no WhatsApp.</p><div class="progress"><i></i></div><div class="browser-notes"><span>◷ Análise rápida</span><span>♢ Dados protegidos</span></div></div>
+        </div>
+        <div class="float-card one">✓ Pedido registrado</div><div class="float-card two">● WhatsApp direto</div>
+      </div>
+    </section>
+
+    <section class="trust"><div class="shell" id="seals"></div></section>
+    <section class="services shell" id="servicos"><div class="section-head"><div><span>SERVIÇOS</span><h2>Escolha o que você precisa</h2></div><p>Valores claros, opções flexíveis e nenhum custo surpresa.</p></div><div class="service-grid" id="serviceGrid"></div></section>
+    <section class="steps" id="como-funciona"><div class="shell"><div class="section-head centered"><div><span>SEM COMPLICAÇÃO</span><h2>Do pedido ao atendimento em 3 passos</h2></div></div><div class="step-grid"><article><i>1</i><h3>Escolha o serviço</h3><p>Compare as opções e selecione o pacote ideal.</p></article><article><i>2</i><h3>Envie os detalhes</h3><p>Informe seus dados, prazo e observações importantes.</p></article><article><i>3</i><h3>Confirme no WhatsApp</h3><p>O pedido é registrado e você segue para o atendimento.</p></article></div></div></section>
+    <section class="faq shell" id="duvidas"><div><span>PERGUNTAS FREQUENTES</span><h2>Ficou com alguma dúvida?</h2><p>Aqui estão as respostas mais importantes antes de fazer seu pedido.</p></div><div id="faqList"></div></section>
+    <section class="final-cta shell"><div><span>PRONTO PARA COMEÇAR?</span><h2>Escolha seu serviço e faça o pedido agora.</h2></div><a class="button light" href="#servicos">Ver serviços →</a></section>
+  </main>
+
+  <footer><div class="shell"><a class="brand" href="#inicio"><i>✓</i><strong id="footerBrand">Nota Certa</strong></a><p>Atendimento organizado, simples e transparente.</p><small>© <span id="year"></span> Nota Certa</small></div></footer>
+
+  <div class="modal" id="orderModal" aria-hidden="true"><div class="modal-backdrop" data-close></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="modal-close" type="button" data-close aria-label="Fechar">×</button><div class="modal-head"><span>FINALIZAR PEDIDO</span><h2 id="modalTitle">Serviço</h2><p>Confira os dados antes de enviar.</p></div><form id="orderForm"><div class="field"><label>Escolha uma opção</label><div id="optionList" class="option-list"></div></div><div class="field-row"><div class="field"><label for="customerName">Seu nome</label><input id="customerName" maxlength="100" required placeholder="Como podemos chamar você?"></div><div class="field"><label for="customerWhatsapp">Seu WhatsApp</label><input id="customerWhatsapp" maxlength="20" inputmode="tel" required placeholder="(11) 99999-9999"></div></div><div class="field"><label for="details">Detalhes do pedido</label><textarea id="details" maxlength="1500" placeholder="Matéria, quantidade, prazo e outras informações..."></textarea></div><div class="coupon"><input id="coupon" maxlength="30" placeholder="CUPOM DE DESCONTO"><small id="couponMessage"></small></div><div class="summary"><span>Total</span><strong id="orderTotal">R$ 0,00</strong></div><button class="button submit" id="submitOrder" type="submit">Enviar pedido pelo WhatsApp →</button><small class="privacy">♢ Seus dados serão usados apenas para atender este pedido.</small></form></section></div>
+  <div class="toast" id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
+  <script src="assets/firebase.js"></script>
+  <script src="assets/data.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
