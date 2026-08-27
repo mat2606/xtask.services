@@ -18,7 +18,10 @@
   window.APP_FIREBASE = {
     db: firebase.database(),
     auth: firebase.auth(),
+    storage: typeof firebase.storage === "function" ? firebase.storage() : null,
     adminEmail: "mp1589530@gmail.com",
-    whatsapp: "5511974984104"
+    whatsapp: "5511974984104",
+    faviconUrl: "https://firebasestorage.googleapis.com/v0/b/nimaflix-2fccc.firebasestorage.app/o/branding%2Ffavicon.png?alt=media",
+    socialPreviewUrl: "https://firebasestorage.googleapis.com/v0/b/nimaflix-2fccc.firebasestorage.app/o/branding%2Fsocial-preview.jpg?alt=media"
   };
 })();
