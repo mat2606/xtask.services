@@ -4,7 +4,10 @@ Exemplo de arquivo:
 public/videos/tarefa-sp.mp4
 
 Depois publique o projeto no GitHub e, no painel /adm, abra Serviços.
-No campo "Caminho do vídeo" da tarefa, informe:
+No campo "Nome ou caminho do vídeo" da tarefa, informe somente:
+tarefa-sp.mp4
+
+O painel também aceita o caminho completo:
 videos/tarefa-sp.mp4
 
 Use nomes sem espaços e sem acentos, como:

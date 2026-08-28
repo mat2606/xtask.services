@@ -4,6 +4,13 @@
   const state = { config: window.safeConfig(), service: null, optionIndex: 0, items: [] };
   const $ = (selector) => document.querySelector(selector);
 
+  function videoPath(value) {
+    const path = String(value || "").trim();
+    if (!path) return "";
+    if (/^(https?:)?\/\//i.test(path) || path.startsWith("/") || path.startsWith("blob:") || path.startsWith("data:")) return path;
+    return path.includes("/") ? path : "videos/" + path;
+  }
+
   function showToast(message, error) {
     const toast = $("#toast"); toast.textContent = message; toast.className = "toast show" + (error ? " error" : "");
     clearTimeout(showToast.timer); showToast.timer = setTimeout(() => { toast.className = "toast"; }, 3800);
@@ -27,7 +34,7 @@
 
   function renderServices() {
     const services = (state.config.services || []).filter((service) => service.active);
-    $("#serviceGrid").innerHTML = services.map((service, index) => `<article class="service-card${service.popular ? " popular" : ""}" style="--service:${window.escapeHtml(service.accent || "#725cff")}">${service.popular ? '<b class="popular-badge">MAIS PEDIDO</b>' : ""}<div class="service-top"><i>${window.escapeHtml(service.icon)}</i><span>0${index + 1}</span></div><h3>${window.escapeHtml(service.name)}</h3><p>${window.escapeHtml(service.description)}</p>${service.videoUrl ? `<div class="service-video"><video controls playsinline preload="metadata" src="${window.escapeHtml(service.videoUrl)}"></video><small>▶ Demonstração do processo manual</small></div>` : ""}<div class="prices">${(service.options || []).map((option) => `<div><span>✓ ${window.escapeHtml(option.label)}</span><strong>${window.money(option.price)}</strong></div>`).join("")}</div><button class="outline-button" data-service="${window.escapeHtml(service.id)}" type="button">＋ Adicionar ao pedido</button></article>`).join("");
+    $("#serviceGrid").innerHTML = services.map((service, index) => `<article class="service-card${service.popular ? " popular" : ""}" style="--service:${window.escapeHtml(service.accent || "#725cff")}">${service.popular ? '<b class="popular-badge">MAIS PEDIDO</b>' : ""}<div class="service-top"><i>${window.escapeHtml(service.icon)}</i><span>0${index + 1}</span></div><h3>${window.escapeHtml(service.name)}</h3><p>${window.escapeHtml(service.description)}</p>${service.videoUrl ? `<div class="service-video"><video controls playsinline preload="metadata" src="${window.escapeHtml(videoPath(service.videoUrl))}"></video><small>▶ Demonstração do processo manual</small></div>` : ""}<div class="prices">${(service.options || []).map((option) => `<div><span>✓ ${window.escapeHtml(option.label)}</span><strong>${window.money(option.price)}</strong></div>`).join("")}</div><button class="outline-button" data-service="${window.escapeHtml(service.id)}" type="button">＋ Adicionar ao pedido</button></article>`).join("");
     document.querySelectorAll("[data-service]").forEach((button) => button.addEventListener("click", () => openAdd(button.dataset.service)));
   }
 
@@ -90,13 +97,13 @@
     const items = state.items.map((item) => Object.assign({}, item, { lineTotal: item.unitPrice * item.quantity }));
     try {
       const orderRef = db.ref("orders").push(); const orderCode = orderRef.key.slice(-6).toUpperCase();
-      await orderRef.set({ customerName: name, customerWhatsapp: whatsapp, serviceId: items.length === 1 ? items[0].serviceId : "pedido-multiplo", serviceName: items.length === 1 ? items[0].serviceName : items.length + " serviços", optionLabel: items.length === 1 ? items[0].optionLabel : "Pedido com vários serviços", items: items, basePrice: data.basePrice, discount: data.discount, totalPrice: data.total, coupon: data.coupon ? data.coupon.code : "", details: details, status: "novo", schemaVersion: 2, createdAt: Date.now() });
+      await orderRef.set({ customerName: name, customerWhatsapp: whatsapp, serviceId: items.length === 1 ? items[0].serviceId : "pedido-multiplo", serviceName: items.length === 1 ? items[0].serviceName : items.length + " serviços", optionLabel: items.length === 1 ? items[0].optionLabel : "Pedido com vários serviços", items: items, basePrice: data.basePrice, discount: data.discount, totalPrice: data.total, coupon: data.coupon ? data.coupon.code : "", details: details, status: "novo", schemaVersion: 2, createdAt: firebase.database.ServerValue.TIMESTAMP });
       const itemLines = items.map((item, index) => `${index + 1}. ${item.serviceName} — ${item.optionLabel} (${item.quantity}×) — ${window.money(item.lineTotal)}`);
       const message = [`Olá! Acabei de fazer o pedido #${orderCode} pelo site.`, `Nome: ${name}`, "", "Serviços:", ...itemLines, "", `Subtotal: ${window.money(data.basePrice)}`, data.coupon ? `Cupom ${data.coupon.code}: -${window.money(data.discount)}` : "", `Total: ${window.money(data.total)}`, details ? `Detalhes: ${details}` : ""].filter(Boolean).join("\n");
       const destination = String(state.config.whatsapp || window.APP_FIREBASE.whatsapp).replace(/\D/g, "");
       state.items = []; renderOrder(); showToast("Pedido registrado. Abrindo o WhatsApp...");
       window.location.href = `https://wa.me/${destination}?text=${encodeURIComponent(message)}`;
-    } catch (error) { console.error(error); const denied = String(error && (error.code || error.message) || "").toLowerCase().includes("permission"); showToast(denied ? "Pedido bloqueado pelo Firebase. Publique as regras incluídas no ZIP." : "Não foi possível registrar o pedido. Tente novamente.", true); }
+    } catch (error) { console.error(error); const code = String(error && (error.code || error.message) || "erro-desconhecido"); const denied = code.toLowerCase().includes("permission"); showToast(denied ? `Firebase recusou o pedido (${code}). As regras publicadas ainda estão bloqueando a gravação.` : `Não foi possível registrar o pedido (${code}).`, true); }
     finally { button.disabled = false; button.textContent = "Enviar tudo pelo WhatsApp →"; }
   }
 
