@@ -12,11 +12,11 @@
   function applyConfig(config) {
     state.config = window.safeConfig(config);
     document.documentElement.style.setProperty("--accent", state.config.accent || "#725cff");
-    $("#brand").textContent = state.config.brand; $("#footerBrand").textContent = state.config.brand;
+    $("#brand").textContent = "XTask"; $("#footerBrand").textContent = "XTask";
     $("#announcement").textContent = state.config.announcement; $("#heroEyebrow").textContent = "✦ " + state.config.heroEyebrow;
-    $("#heroTitle").textContent = state.config.heroTitle; $("#heroSubtitle").textContent = state.config.heroSubtitle;
-    $("#siteFavicon").href = state.config.faviconUrl || window.APP_FIREBASE.faviconUrl;
-    document.title = state.config.brand + " | Sala do Futuro";
+    $("#heroTitle").textContent = "Falta tempo? A XTask agiliza suas tarefas."; $("#heroSubtitle").textContent = state.config.heroSubtitle;
+    $("#siteFavicon").href = "assets/brand/favicon.jpg";
+    document.title = "XTask | Sala do Futuro";
     renderSeals(); renderServices(); renderFaqs();
   }
 
@@ -27,7 +27,7 @@
 
   function renderServices() {
     const services = (state.config.services || []).filter((service) => service.active);
-    $("#serviceGrid").innerHTML = services.map((service, index) => `<article class="service-card${service.popular ? " popular" : ""}" style="--service:${window.escapeHtml(service.accent || "#725cff")}">${service.popular ? '<b class="popular-badge">MAIS PEDIDO</b>' : ""}<div class="service-top"><i>${window.escapeHtml(service.icon)}</i><span>0${index + 1}</span></div><h3>${window.escapeHtml(service.name)}</h3><p>${window.escapeHtml(service.description)}</p><div class="prices">${(service.options || []).map((option) => `<div><span>✓ ${window.escapeHtml(option.label)}</span><strong>${window.money(option.price)}</strong></div>`).join("")}</div><button class="outline-button" data-service="${window.escapeHtml(service.id)}" type="button">＋ Adicionar ao pedido</button></article>`).join("");
+    $("#serviceGrid").innerHTML = services.map((service, index) => `<article class="service-card${service.popular ? " popular" : ""}" style="--service:${window.escapeHtml(service.accent || "#725cff")}">${service.popular ? '<b class="popular-badge">MAIS PEDIDO</b>' : ""}<div class="service-top"><i>${window.escapeHtml(service.icon)}</i><span>0${index + 1}</span></div><h3>${window.escapeHtml(service.name)}</h3><p>${window.escapeHtml(service.description)}</p>${service.videoUrl ? `<div class="service-video"><video controls playsinline preload="metadata" src="${window.escapeHtml(service.videoUrl)}"></video><small>▶ Demonstração do processo manual</small></div>` : ""}<div class="prices">${(service.options || []).map((option) => `<div><span>✓ ${window.escapeHtml(option.label)}</span><strong>${window.money(option.price)}</strong></div>`).join("")}</div><button class="outline-button" data-service="${window.escapeHtml(service.id)}" type="button">＋ Adicionar ao pedido</button></article>`).join("");
     document.querySelectorAll("[data-service]").forEach((button) => button.addEventListener("click", () => openAdd(button.dataset.service)));
   }
 
