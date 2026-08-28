@@ -1,0 +1,13 @@
+XTASK — VÍDEOS SEM FIREBASE STORAGE
+
+1. Envie o arquivo MP4 diretamente para a raiz do repositório GitHub.
+2. Entre em /adm e abra Serviços.
+3. No campo "Nome do vídeo", informe exatamente o nome do arquivo.
+
+Exemplo:
+tarefa-sp.mp4
+
+Não coloque assets/ ou videos/ antes do nome nesta versão.
+Use nomes sem espaços e sem acentos.
+
+Pelo navegador do GitHub, cada arquivo pode ter no máximo 25 MB.
