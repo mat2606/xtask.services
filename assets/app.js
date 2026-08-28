@@ -90,13 +90,13 @@
     const items = state.items.map((item) => Object.assign({}, item, { lineTotal: item.unitPrice * item.quantity }));
     try {
       const orderRef = db.ref("orders").push(); const orderCode = orderRef.key.slice(-6).toUpperCase();
-      await orderRef.set({ customerName: name, customerWhatsapp: whatsapp, serviceId: items.length === 1 ? items[0].serviceId : "pedido-multiplo", serviceName: items.length === 1 ? items[0].serviceName : items.length + " serviços", optionLabel: items.length === 1 ? items[0].optionLabel : "Pedido com vários serviços", items: items, basePrice: data.basePrice, discount: data.discount, totalPrice: data.total, coupon: data.coupon ? data.coupon.code : "", details: details, status: "novo", createdAt: firebase.database.ServerValue.TIMESTAMP });
+      await orderRef.set({ customerName: name, customerWhatsapp: whatsapp, serviceId: items.length === 1 ? items[0].serviceId : "pedido-multiplo", serviceName: items.length === 1 ? items[0].serviceName : items.length + " serviços", optionLabel: items.length === 1 ? items[0].optionLabel : "Pedido com vários serviços", items: items, basePrice: data.basePrice, discount: data.discount, totalPrice: data.total, coupon: data.coupon ? data.coupon.code : "", details: details, status: "novo", schemaVersion: 2, createdAt: Date.now() });
       const itemLines = items.map((item, index) => `${index + 1}. ${item.serviceName} — ${item.optionLabel} (${item.quantity}×) — ${window.money(item.lineTotal)}`);
       const message = [`Olá! Acabei de fazer o pedido #${orderCode} pelo site.`, `Nome: ${name}`, "", "Serviços:", ...itemLines, "", `Subtotal: ${window.money(data.basePrice)}`, data.coupon ? `Cupom ${data.coupon.code}: -${window.money(data.discount)}` : "", `Total: ${window.money(data.total)}`, details ? `Detalhes: ${details}` : ""].filter(Boolean).join("\n");
       const destination = String(state.config.whatsapp || window.APP_FIREBASE.whatsapp).replace(/\D/g, "");
       state.items = []; renderOrder(); showToast("Pedido registrado. Abrindo o WhatsApp...");
       window.location.href = `https://wa.me/${destination}?text=${encodeURIComponent(message)}`;
-    } catch (error) { console.error(error); showToast("Não foi possível registrar. Confira as regras do Firebase.", true); }
+    } catch (error) { console.error(error); const denied = String(error && (error.code || error.message) || "").toLowerCase().includes("permission"); showToast(denied ? "Pedido bloqueado pelo Firebase. Publique as regras incluídas no ZIP." : "Não foi possível registrar o pedido. Tente novamente.", true); }
     finally { button.disabled = false; button.textContent = "Enviar tudo pelo WhatsApp →"; }
   }
 
