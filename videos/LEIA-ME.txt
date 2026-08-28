@@ -1,0 +1,16 @@
+COLOQUE OS VÍDEOS MP4 NESTA PASTA
+
+Exemplo de arquivo:
+public/videos/tarefa-sp.mp4
+
+Depois publique o projeto no GitHub e, no painel /adm, abra Serviços.
+No campo "Caminho do vídeo" da tarefa, informe:
+videos/tarefa-sp.mp4
+
+Use nomes sem espaços e sem acentos, como:
+redacao-paulista.mp4
+leia-sp.mp4
+speak.mp4
+khan-academy.mp4
+
+Pelo navegador do GitHub, cada arquivo pode ter no máximo 25 MB.
