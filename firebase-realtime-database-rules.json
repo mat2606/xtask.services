@@ -1,0 +1,16 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "config": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email == 'mp1589530@gmail.com'"
+    },
+    "orders": {
+      ".read": "auth != null && auth.token.email == 'mp1589530@gmail.com'",
+      "$orderId": {
+        ".write": "(auth != null && auth.token.email == 'mp1589530@gmail.com') || !data.exists()"
+      }
+    }
+  }
+}

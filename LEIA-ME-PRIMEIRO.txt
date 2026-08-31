@@ -1,0 +1,14 @@
+XTASK — VERSÃO PLANA PARA GITHUB
+
+Esta versão foi preparada para funcionar exatamente com todos os arquivos
+na raiz, como aparece na sua captura de tela. Não crie a pasta assets.
+
+1. Apague os arquivos antigos do repositório, preservando somente os MP4.
+2. Envie todos os arquivos deste pacote para a raiz do GitHub.
+3. Substitua os arquivos quando o GitHub solicitar.
+4. Abra firebase-realtime-database-rules.json, copie todo o conteúdo, cole na
+   aba Regras do REALTIME DATABASE e clique em Publicar. Apenas enviar esse
+   arquivo ao GitHub NÃO altera as regras do Firebase.
+5. Aguarde o GitHub Pages concluir e pressione Ctrl + F5 no site.
+
+O site usa ?v=10 para impedir que o navegador carregue a versão antiga.
