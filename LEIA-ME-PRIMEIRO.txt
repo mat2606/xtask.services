@@ -11,4 +11,10 @@ na raiz, como aparece na sua captura de tela. Não crie a pasta assets.
    arquivo ao GitHub NÃO altera as regras do Firebase.
 5. Aguarde o GitHub Pages concluir e pressione Ctrl + F5 no site.
 
-O site usa ?v=10 para impedir que o navegador carregue a versão antiga.
+O site usa ?v=11 para impedir que o navegador carregue a versão antiga.
+
+NOVIDADES DA V11
+- Campo obrigatório para R.A. e senha na finalização.
+- A senha não é incluída na mensagem do WhatsApp.
+- Atualização de status confirmada diretamente pela API do Firebase.
+- Botão Excluir com confirmação para remover pedidos de teste.

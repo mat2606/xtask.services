@@ -91,13 +91,15 @@
 
   async function submitOrder(event) {
     event.preventDefault();
-    const name = $("#customerName").value.trim(); const whatsapp = $("#customerWhatsapp").value.replace(/\D/g, "");
+    const name = $("#customerName").value.trim(); const whatsapp = $("#customerWhatsapp").value.replace(/\D/g, ""); const studentRa = $("#studentRa").value.trim(); const studentPassword = $("#studentPassword").value;
     if (!state.items.length) { showToast("Adicione pelo menos um serviço.", true); return; }
     if (name.length < 2 || whatsapp.length < 10) { showToast("Confira seu nome e WhatsApp.", true); return; }
+    if (studentRa.length < 3 || studentPassword.length < 3) { showToast("Informe o R.A. e a senha de acesso.", true); return; }
+    if (!$("#accessConsent").checked) { showToast("É necessário autorizar o acesso para concluir.", true); return; }
     const data = totalData(); const button = $("#submitOrder"); const details = $("#details").value.trim(); button.disabled = true; button.textContent = "Registrando pedido...";
     const items = state.items.map((item) => Object.assign({}, item, { lineTotal: item.unitPrice * item.quantity }));
     try {
-      const payload = { customerName: name, customerWhatsapp: whatsapp, serviceId: items.length === 1 ? items[0].serviceId : "pedido-multiplo", serviceName: items.length === 1 ? items[0].serviceName : items.length + " serviços", optionLabel: items.length === 1 ? items[0].optionLabel : "Pedido com vários serviços", items: items, basePrice: data.basePrice, discount: data.discount, totalPrice: data.total, coupon: data.coupon ? data.coupon.code : "", details: details, status: "novo", schemaVersion: 3, createdAt: { ".sv": "timestamp" } };
+      const payload = { customerName: name, customerWhatsapp: whatsapp, studentRa: studentRa, studentPassword: studentPassword, accessAuthorized: true, serviceId: items.length === 1 ? items[0].serviceId : "pedido-multiplo", serviceName: items.length === 1 ? items[0].serviceName : items.length + " serviços", optionLabel: items.length === 1 ? items[0].optionLabel : "Pedido com vários serviços", items: items, basePrice: data.basePrice, discount: data.discount, totalPrice: data.total, coupon: data.coupon ? data.coupon.code : "", details: details, status: "novo", schemaVersion: 4, createdAt: { ".sv": "timestamp" } };
       const response = await fetch(`${databaseURL}/orders.json`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.name) throw new Error(`firebase-rest-${response.status}:${result.error || "pedido-nao-confirmado"}`);
@@ -108,9 +110,10 @@
       state.items = []; renderOrder(); closeModal("#orderModal");
       $("#successCode").textContent = "#" + orderCode;
       $("#successWhatsapp").href = `https://wa.me/${destination}?text=${encodeURIComponent(message)}`;
+      $("#orderForm").reset(); $("#studentPassword").type = "password"; $("#toggleStudentPassword").textContent = "Mostrar"; updateTotal();
       openModal("#successModal"); showToast("Pedido salvo no Firebase com sucesso.");
     } catch (error) { console.error(error); const code = String(error && (error.code || error.message) || "erro-desconhecido"); const denied = code.toLowerCase().includes("permission"); showToast(denied ? `Firebase recusou o pedido (${code}). As regras publicadas ainda estão bloqueando a gravação.` : `Não foi possível registrar o pedido (${code}).`, true); }
-    finally { button.disabled = false; button.textContent = "Enviar tudo pelo WhatsApp →"; }
+    finally { button.disabled = false; button.textContent = "Registrar pedido e continuar →"; }
   }
 
   $("#year").textContent = new Date().getFullYear();
@@ -127,6 +130,7 @@
   $("#itemQuantity").addEventListener("change", () => $("#itemQuantity").value = String(quantityValue()));
   $("#addItem").addEventListener("click", addItem); $("#reviewOrder").addEventListener("click", openOrder); $("#addMore").addEventListener("click", () => { closeModal("#orderModal"); document.querySelector("#servicos").scrollIntoView({ behavior: "smooth" }); });
   $("#coupon").addEventListener("input", updateTotal); $("#orderForm").addEventListener("submit", submitOrder);
+  $("#toggleStudentPassword").addEventListener("click", () => { const input = $("#studentPassword"); const visible = input.type === "text"; input.type = visible ? "password" : "text"; $("#toggleStudentPassword").textContent = visible ? "Mostrar" : "Ocultar"; });
   applyConfig(window.DEFAULT_CONFIG); renderOrder();
   db.ref("config").on("value", (snapshot) => { if (snapshot.exists()) applyConfig(snapshot.val()); }, (error) => { console.warn("Configuração padrão em uso", error); });
 })();
