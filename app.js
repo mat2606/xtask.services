@@ -1,136 +1,145 @@
-(function () {
-  "use strict";
-  const db = window.APP_FIREBASE.db;
-  const databaseURL = window.APP_FIREBASE.databaseURL.replace(/\/$/, "");
-  const state = { config: window.safeConfig(), service: null, optionIndex: 0, items: [] };
-  const $ = (selector) => document.querySelector(selector);
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot, serverTimestamp, getDocs, query, orderBy, limit, updateDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+import { TRIGGER_URL } from "./trigger-config.js";
 
-  function videoPath(value) {
-    const path = String(value || "").trim();
-    if (!path) return "";
-    if (/^(https?:)?\/\//i.test(path) || path.startsWith("/") || path.startsWith("blob:") || path.startsWith("data:")) return path;
-    return path;
-  }
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = (id) => document.getElementById(id);
+let uid = null, ads = [], activeAd = null, keywords = [], selectedKeyword = null;
+let unsubAds = null, unsubKeywords = null, unsubQueue = null;
+let requestedRuns = 1;
 
-  function showToast(message, error) {
-    const toast = $("#toast"); toast.textContent = message; toast.className = "toast show" + (error ? " error" : "");
-    clearTimeout(showToast.timer); showToast.timer = setTimeout(() => { toast.className = "toast"; }, 3800);
-  }
+const normalizeMlb = (v) => (String(v || '').toUpperCase().match(/MLB\d{6,}/) || [])[0] || '';
+const kwId = (s) => btoa(unescape(encodeURIComponent(s.trim().toLowerCase()))).replace(/[+/=]/g, c => ({'+':'-','/':'_','=':''}[c]));
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const stamp = (t) => t?.toMillis ? t.toMillis() : (t ? new Date(t).getTime() : 0);
+const fmtTime = (ts) => { if (!ts) return '—'; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); };
+const short = (s,n) => String(s||'').length > n ? String(s).slice(0,n-1)+'…' : String(s||'');
+const toast = (msg) => { const el=$('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),3600); };
 
-  function applyConfig(config) {
-    state.config = window.safeConfig(config);
-    document.documentElement.style.setProperty("--accent", state.config.accent || "#725cff");
-    $("#brand").textContent = "XTask"; $("#footerBrand").textContent = "XTask";
-    $("#announcement").textContent = state.config.announcement; $("#heroEyebrow").textContent = "✦ " + state.config.heroEyebrow;
-    $("#heroTitle").textContent = "Falta tempo? A XTask agiliza suas tarefas."; $("#heroSubtitle").textContent = state.config.heroSubtitle;
-    $("#siteFavicon").href = "favicon.jpg";
-    document.title = "XTask | Sala do Futuro";
-    renderSeals(); renderServices(); renderFaqs();
-  }
+$('loginBtn').onclick = async()=>{ try{ await signInWithEmailAndPassword(auth,$('authEmail').value.trim(),$('authPassword').value); }catch(e){toast('Login: '+friendlyError(e));} };
+$('signupBtn').onclick = async()=>{ try{ await createUserWithEmailAndPassword(auth,$('authEmail').value.trim(),$('authPassword').value); }catch(e){toast('Cadastro: '+friendlyError(e));} };
+$('guestBtn').onclick = async()=>{ try{ await signInAnonymously(auth); }catch(e){toast('Visitante: '+friendlyError(e));} };
+$('logoutBtn').onclick = ()=>signOut(auth);
 
-  function renderSeals() {
-    const icons = ["✓", "♢", "●"];
-    $("#seals").innerHTML = (state.config.seals || []).map((seal, index) => `<div><i>${icons[index % icons.length]}</i><strong>${window.escapeHtml(seal)}</strong></div>`).join("");
-  }
+function friendlyError(e){ const c=e?.code||''; if(c.includes('invalid-credential')) return 'e-mail ou senha inválidos.'; if(c.includes('email-already-in-use')) return 'este e-mail já está cadastrado.'; if(c.includes('weak-password')) return 'use uma senha com pelo menos 6 caracteres.'; if(c.includes('operation-not-allowed')) return 'ative este método em Firebase Authentication.'; return e?.message||String(e); }
 
-  function renderServices() {
-    const services = (state.config.services || []).filter((service) => service.active);
-    $("#serviceGrid").innerHTML = services.map((service, index) => `<article class="service-card${service.popular ? " popular" : ""}" style="--service:${window.escapeHtml(service.accent || "#725cff")}">${service.popular ? '<b class="popular-badge">MAIS PEDIDO</b>' : ""}<div class="service-top"><i>${window.escapeHtml(service.icon)}</i><span>0${index + 1}</span></div><h3>${window.escapeHtml(service.name)}</h3><p>${window.escapeHtml(service.description)}</p>${service.videoUrl ? `<div class="service-video"><video controls playsinline preload="metadata" src="${window.escapeHtml(videoPath(service.videoUrl))}"></video><small>▶ Demonstração do processo manual</small></div>` : ""}<div class="prices">${(service.options || []).map((option) => `<div><span>✓ ${window.escapeHtml(option.label)}</span><strong>${window.money(option.price)}</strong></div>`).join("")}</div><button class="outline-button" data-service="${window.escapeHtml(service.id)}" type="button">＋ Adicionar ao pedido</button></article>`).join("");
-    document.querySelectorAll("[data-service]").forEach((button) => button.addEventListener("click", () => openAdd(button.dataset.service)));
-  }
+onAuthStateChanged(auth, user => {
+  cleanup();
+  if(!user){ uid=null; $('authView').classList.remove('hidden'); $('appView').classList.add('hidden'); return; }
+  uid=user.uid; $('authView').classList.add('hidden'); $('appView').classList.remove('hidden');
+  $('userLine').textContent = user.isAnonymous ? `Sessão visitante • ${user.uid.slice(0,8)}` : user.email;
+  $('cloudBadge').textContent='● Firebase conectado';
+  listenAds(); listenQueue();
+});
 
-  function renderFaqs() {
-    $("#faqList").innerHTML = (state.config.faqs || []).map((faq, index) => `<details${index === 0 ? " open" : ""}><summary>${window.escapeHtml(faq.question)}<i>+</i></summary><p>${window.escapeHtml(faq.answer)}</p></details>`).join("");
-  }
+function cleanup(){ if(unsubAds)unsubAds(); if(unsubKeywords)unsubKeywords(); if(unsubQueue)unsubQueue(); unsubAds=unsubKeywords=unsubQueue=null; ads=[];keywords=[];activeAd=null;selectedKeyword=null; }
 
-  function openModal(id) { $(id).classList.add("open"); $(id).setAttribute("aria-hidden", "false"); document.body.classList.add("no-scroll"); }
-  function closeModal(id) { $(id).classList.remove("open"); $(id).setAttribute("aria-hidden", "true"); if (!document.querySelector(".modal.open")) document.body.classList.remove("no-scroll"); }
+for(const chip of document.querySelectorAll('.run-chip')) chip.onclick=()=>{ document.querySelectorAll('.run-chip').forEach(x=>x.classList.remove('active')); chip.classList.add('active'); requestedRuns=Number(chip.dataset.runs||1); $('statusText').textContent=requestedRuns===3?'Cada palavra fará 3 sessões limpas e salvará a mediana.':'Varredura rápida com 1 sessão limpa.'; };
 
-  function openAdd(serviceId) {
-    state.service = state.config.services.find((item) => item.id === serviceId); state.optionIndex = 0;
-    if (!state.service || !state.service.options.length) return;
-    $("#addModalTitle").textContent = state.service.name;
-    $("#itemQuantity").value = "1";
-    $("#optionList").innerHTML = state.service.options.map((option, index) => `<label class="order-option${index === 0 ? " selected" : ""}"><input type="radio" name="option" value="${index}"${index === 0 ? " checked" : ""}><span>${window.escapeHtml(option.label)}</span><strong>${window.money(option.price)}</strong></label>`).join("");
-    document.querySelectorAll('input[name="option"]').forEach((input) => input.addEventListener("change", () => { state.optionIndex = Number(input.value); document.querySelectorAll(".order-option").forEach((label) => label.classList.toggle("selected", label.contains(input) && input.checked)); }));
-    closeModal("#orderModal"); openModal("#addModal");
-  }
+$('addAdBtn').onclick = async()=>{
+  const mlb=normalizeMlb($('mlbInput').value), name=$('adNameInput').value.trim();
+  if(!mlb) return toast('Cole um MLB válido ou o link do anúncio.');
+  await setDoc(doc(db,'users',uid,'ads',mlb),{mlb,name:name||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
+  $('mlbInput').value=''; $('adNameInput').value=''; toast(`${mlb} salvo.`);
+};
 
-  function quantityValue() { return Math.min(99, Math.max(1, Number($("#itemQuantity").value) || 1)); }
+$('addKeywordsBtn').onclick = async()=>{
+  if(!activeAd) return toast('Selecione um MLB primeiro.');
+  const list=[...new Set($('keywordsInput').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];
+  if(!list.length) return toast('Digite pelo menos uma palavra-chave.');
+  for(const keyword of list){ const id=kwId(keyword); await setDoc(doc(db,'users',uid,'ads',activeAd.mlb,'keywords',id),{keyword,createdAt:serverTimestamp(),updatedAt:serverTimestamp(),autoEnabled:false,frequencyHours:24},{merge:true}); }
+  $('keywordsInput').value=''; toast(`${list.length} palavra(s) salva(s).`);
+};
 
-  function addItem() {
-    if (!state.service) return;
-    const option = state.service.options[state.optionIndex]; const quantity = quantityValue();
-    const existing = state.items.find((item) => item.serviceId === state.service.id && item.optionLabel === option.label && item.unitPrice === Number(option.price));
-    if (existing) existing.quantity = Math.min(99, existing.quantity + quantity);
-    else state.items.push({ serviceId: state.service.id, serviceName: state.service.name, optionLabel: option.label, unitPrice: Number(option.price), quantity: quantity });
-    closeModal("#addModal"); renderOrder(); showToast(`${state.service.name} adicionado ao pedido.`);
-  }
+$('adSelect').onchange=()=>{ const ad=ads.find(a=>a.mlb===$('adSelect').value); if(ad)selectAd(ad); };
+$('filterInput').oninput=renderAds;
+$('scanAllBtn').onclick=()=>scanAll();
+$('scanSelectedBtn').onclick=()=>scanAll();
 
-  function subtotal() { return state.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0); }
-  function couponData() { const code = $("#coupon").value.trim().toUpperCase(); return (state.config.coupons || []).find((item) => item.active && item.code.toUpperCase() === code); }
-  function totalData() { const basePrice = subtotal(); const coupon = couponData(); const discount = coupon ? Math.round(basePrice * coupon.percent / 100) : 0; return { basePrice, coupon, discount, total: Math.max(0, basePrice - discount) }; }
+async function scanAll(){ if(!activeAd)return toast('Selecione um MLB.'); if(!keywords.length)return toast('Adicione palavras-chave.'); const jobs=[]; for(const k of keywords) jobs.push(await enqueue(k)); await triggerScanner(); toast(`${jobs.length} pesquisa(s) enviada(s) para o Chromium.`); }
 
-  function renderOrder() {
-    const totalQuantity = state.items.reduce((sum, item) => sum + item.quantity, 0);
-    $("#orderDock").classList.toggle("show", state.items.length > 0);
-    $("#dockCount").textContent = totalQuantity + (totalQuantity === 1 ? " item adicionado" : " itens adicionados");
-    $("#dockTotal").textContent = window.money(subtotal());
-    $("#selectedItems").innerHTML = state.items.length ? state.items.map((item, index) => `<article class="selected-item"><div><strong>${window.escapeHtml(item.serviceName)}</strong><small>${window.escapeHtml(item.optionLabel)} · ${window.money(item.unitPrice)} cada</small></div><div class="selected-item-actions"><span>${item.quantity}×</span><strong>${window.money(item.unitPrice * item.quantity)}</strong><button type="button" data-remove-item="${index}" aria-label="Remover item">×</button></div></article>`).join("") : '<div class="empty-order">Nenhum serviço adicionado.</div>';
-    document.querySelectorAll("[data-remove-item]").forEach((button) => button.addEventListener("click", () => { state.items.splice(Number(button.dataset.removeItem), 1); renderOrder(); if (!state.items.length) closeModal("#orderModal"); }));
-    $("#submitOrder").disabled = !state.items.length;
-    updateTotal();
-  }
+async function enqueue(k){
+  const ref=await addDoc(collection(db,'users',uid,'queue'),{adId:activeAd.mlb,keywordId:k.id,keyword:k.keyword,status:'pending',requestedRuns,createdAt:serverTimestamp()});
+  return ref.id;
+}
 
-  function updateTotal() {
-    const data = totalData(); $("#orderTotal").textContent = window.money(data.total); const value = $("#coupon").value.trim();
-    $("#couponMessage").textContent = data.coupon ? data.coupon.percent + "% aplicado" : value ? "Cupom não encontrado" : ""; $("#couponMessage").className = data.coupon ? "valid" : "";
-  }
+async function scanOne(k){ if(!activeAd)return; await enqueue(k); await triggerScanner(); toast(`Varredura enviada: ${k.keyword}`); }
 
-  function openOrder() { if (!state.items.length) { showToast("Adicione pelo menos um serviço.", true); return; } renderOrder(); openModal("#orderModal"); }
+async function triggerScanner(){
+  if(!TRIGGER_URL){ $('robotBadge').textContent='Chromium • fila salva'; return; }
+  try{
+    const token=await auth.currentUser.getIdToken();
+    const r=await fetch(TRIGGER_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({uid})});
+    if(!r.ok) throw new Error((await r.text()).slice(0,200));
+    $('robotBadge').textContent='Chromium • acionado';
+  }catch(e){ console.warn(e); $('robotBadge').textContent='Chromium • aguardando agendado'; toast('Fila salva. O acionador instantâneo falhou; o agendamento do GitHub ainda poderá executar.'); }
+}
 
-  async function submitOrder(event) {
-    event.preventDefault();
-    const name = $("#customerName").value.trim(); const whatsapp = $("#customerWhatsapp").value.replace(/\D/g, ""); const studentRa = $("#studentRa").value.trim(); const studentPassword = $("#studentPassword").value;
-    if (!state.items.length) { showToast("Adicione pelo menos um serviço.", true); return; }
-    if (name.length < 2 || whatsapp.length < 10) { showToast("Confira seu nome e WhatsApp.", true); return; }
-    if (studentRa.length < 3 || studentPassword.length < 3) { showToast("Informe o R.A. e a senha de acesso.", true); return; }
-    if (!$("#accessConsent").checked) { showToast("É necessário autorizar o acesso para concluir.", true); return; }
-    const data = totalData(); const button = $("#submitOrder"); const details = $("#details").value.trim(); button.disabled = true; button.textContent = "Registrando pedido...";
-    const items = state.items.map((item) => Object.assign({}, item, { lineTotal: item.unitPrice * item.quantity }));
-    try {
-      const payload = { customerName: name, customerWhatsapp: whatsapp, studentRa: studentRa, studentPassword: studentPassword, accessAuthorized: true, serviceId: items.length === 1 ? items[0].serviceId : "pedido-multiplo", serviceName: items.length === 1 ? items[0].serviceName : items.length + " serviços", optionLabel: items.length === 1 ? items[0].optionLabel : "Pedido com vários serviços", items: items, basePrice: data.basePrice, discount: data.discount, totalPrice: data.total, coupon: data.coupon ? data.coupon.code : "", details: details, status: "novo", schemaVersion: 4, createdAt: { ".sv": "timestamp" } };
-      const response = await fetch(`${databaseURL}/orders.json`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.name) throw new Error(`firebase-rest-${response.status}:${result.error || "pedido-nao-confirmado"}`);
-      const orderCode = result.name.slice(-6).toUpperCase();
-      const itemLines = items.map((item, index) => `${index + 1}. ${item.serviceName} — ${item.optionLabel} (${item.quantity}×) — ${window.money(item.lineTotal)}`);
-      const message = [`Olá! Acabei de fazer o pedido #${orderCode} pelo site.`, `Nome: ${name}`, "", "Serviços:", ...itemLines, "", `Subtotal: ${window.money(data.basePrice)}`, data.coupon ? `Cupom ${data.coupon.code}: -${window.money(data.discount)}` : "", `Total: ${window.money(data.total)}`, details ? `Detalhes: ${details}` : ""].filter(Boolean).join("\n");
-      const destination = String(state.config.whatsapp || window.APP_FIREBASE.whatsapp).replace(/\D/g, "");
-      state.items = []; renderOrder(); closeModal("#orderModal");
-      $("#successCode").textContent = "#" + orderCode;
-      $("#successWhatsapp").href = `https://wa.me/${destination}?text=${encodeURIComponent(message)}`;
-      $("#orderForm").reset(); $("#studentPassword").type = "password"; $("#toggleStudentPassword").textContent = "Mostrar"; updateTotal();
-      openModal("#successModal"); showToast("Pedido salvo no Firebase com sucesso.");
-    } catch (error) { console.error(error); const code = String(error && (error.code || error.message) || "erro-desconhecido"); const denied = code.toLowerCase().includes("permission"); showToast(denied ? `Firebase recusou o pedido (${code}). As regras publicadas ainda estão bloqueando a gravação.` : `Não foi possível registrar o pedido (${code}).`, true); }
-    finally { button.disabled = false; button.textContent = "Registrar pedido e continuar →"; }
-  }
+function listenAds(){
+  unsubAds=onSnapshot(collection(db,'users',uid,'ads'),snap=>{
+    ads=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>stamp(b.updatedAt)-stamp(a.updatedAt)||String(a.mlb).localeCompare(String(b.mlb)));
+    const prev=activeAd?.mlb;
+    renderAds(); renderAdSelect();
+    if(prev){ const p=ads.find(a=>a.mlb===prev); if(p)selectAd(p,false); else if(ads[0])selectAd(ads[0]); }
+    else if(ads[0])selectAd(ads[0]); else clearAdView();
+  });
+}
 
-  $("#year").textContent = new Date().getFullYear();
-  $("#themeButton").addEventListener("click", () => { const dark = !document.documentElement.classList.contains("dark"); document.documentElement.classList.toggle("dark", dark); localStorage.setItem("nota-theme", dark ? "dark" : "light"); $("#themeButton").textContent = dark ? "☀" : "☾"; });
-  if (localStorage.getItem("nota-theme") === "dark" || (!localStorage.getItem("nota-theme") && matchMedia("(prefers-color-scheme: dark)").matches)) { document.documentElement.classList.add("dark"); $("#themeButton").textContent = "☀"; }
-  $("#menuButton").addEventListener("click", () => $("#menu").classList.toggle("open"));
-  $("#menu").querySelectorAll("a").forEach((link) => link.addEventListener("click", () => $("#menu").classList.remove("open")));
-  document.querySelectorAll("[data-close-add]").forEach((item) => item.addEventListener("click", () => closeModal("#addModal")));
-  document.querySelectorAll("[data-close-order]").forEach((item) => item.addEventListener("click", () => closeModal("#orderModal")));
-  document.querySelectorAll("[data-close-success]").forEach((item) => item.addEventListener("click", () => closeModal("#successModal")));
-  document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeModal("#addModal"); closeModal("#orderModal"); closeModal("#successModal"); } });
-  $("#quantityMinus").addEventListener("click", () => { $("#itemQuantity").value = String(Math.max(1, quantityValue() - 1)); });
-  $("#quantityPlus").addEventListener("click", () => { $("#itemQuantity").value = String(Math.min(99, quantityValue() + 1)); });
-  $("#itemQuantity").addEventListener("change", () => $("#itemQuantity").value = String(quantityValue()));
-  $("#addItem").addEventListener("click", addItem); $("#reviewOrder").addEventListener("click", openOrder); $("#addMore").addEventListener("click", () => { closeModal("#orderModal"); document.querySelector("#servicos").scrollIntoView({ behavior: "smooth" }); });
-  $("#coupon").addEventListener("input", updateTotal); $("#orderForm").addEventListener("submit", submitOrder);
-  $("#toggleStudentPassword").addEventListener("click", () => { const input = $("#studentPassword"); const visible = input.type === "text"; input.type = visible ? "password" : "text"; $("#toggleStudentPassword").textContent = visible ? "Mostrar" : "Ocultar"; });
-  applyConfig(window.DEFAULT_CONFIG); renderOrder();
-  db.ref("config").on("value", (snapshot) => { if (snapshot.exists()) applyConfig(snapshot.val()); }, (error) => { console.warn("Configuração padrão em uso", error); });
-})();
+function renderAdSelect(){ $('adSelect').innerHTML=ads.length?ads.map(a=>`<option value="${a.mlb}" ${activeAd?.mlb===a.mlb?'selected':''}>${esc(a.name||a.title||a.mlb)} • ${a.mlb}</option>`).join(''):'<option value="">Nenhum MLB salvo</option>'; }
+
+function renderAds(){ const q=$('filterInput').value.trim().toLowerCase(); const filtered=ads.filter(a=>!q||`${a.mlb} ${a.name||''} ${a.title||''}`.toLowerCase().includes(q)); $('adsList').innerHTML=filtered.map(a=>`<div class="ad-card ${activeAd?.mlb===a.mlb?'active':''}" data-mlb="${a.mlb}"><button class="delete-ad" data-del="${a.mlb}" title="Excluir">×</button><strong>${esc(a.name||a.title||a.mlb)}</strong><small>${a.mlb}${a.title&&a.title!==a.name?' • '+esc(short(a.title,58)):''}</small></div>`).join('')||'<div class="subtle">Nenhum MLB salvo.</div>';
+  document.querySelectorAll('.ad-card').forEach(el=>el.onclick=(ev)=>{ if(ev.target.dataset.del)return; const a=ads.find(x=>x.mlb===el.dataset.mlb); if(a)selectAd(a); });
+  document.querySelectorAll('[data-del]').forEach(btn=>btn.onclick=async(ev)=>{ ev.stopPropagation(); const mlb=btn.dataset.del; if(confirm(`Excluir ${mlb} e seus dados?`)) await deleteDoc(doc(db,'users',uid,'ads',mlb)); });
+}
+
+function selectAd(ad,rerender=true){ activeAd=ad; selectedKeyword=null; if(unsubKeywords)unsubKeywords(); $('adSelect').value=ad.mlb; if(rerender)renderAds(); $('chartSubtitle').textContent=`${ad.name||ad.title||ad.mlb} • ${ad.mlb}`; listenKeywords(); }
+
+function listenKeywords(){
+  unsubKeywords=onSnapshot(collection(db,'users',uid,'ads',activeAd.mlb,'keywords'),snap=>{
+    keywords=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.keyword).localeCompare(String(b.keyword),'pt-BR'));
+    renderKeywords(); renderMetrics(); drawBarChart();
+    if(selectedKeyword){ const k=keywords.find(x=>x.id===selectedKeyword.id); if(k) selectedKeyword=k; }
+  });
+}
+
+function clearAdView(){ keywords=[]; $('keywordsTable').innerHTML='<tr><td colspan="9">Salve um MLB para começar.</td></tr>'; $('chartSubtitle').textContent='Selecione um MLB.'; renderMetrics(); drawBarChart(); drawLineChart([]); }
+
+function renderKeywords(){
+  $('keywordsTable').innerHTML=keywords.map(k=>{
+    const general=num(k.referenceGeneralPosition), organic=num(k.referenceOrganicPosition), ad=num(k.referenceAdsPosition), delta=num(k.deltaOrganic ?? k.deltaGeneral);
+    const deltaHtml=delta===null?'—':delta>0?`<span class="delta up">▲ ${delta}</span>`:delta<0?`<span class="delta down">▼ ${Math.abs(delta)}</span>`:'<span class="delta flat">0</span>';
+    const range=k.requestedRuns===3 && k.referenceMin && k.referenceMax?`<span class="range">#${k.referenceMin}–#${k.referenceMax}</span>`:'—';
+    return `<tr><td><span class="kw-link" data-hist="${k.id}">${esc(k.keyword)}</span></td><td>${general?`<span class="pos">#${general}</span>`:'—'}</td><td>${organic?`<span class="pos org">#${organic}</span>`:'—'}</td><td>${ad?`<span class="pos ad">#${ad}</span>`:'—'}</td><td>${deltaHtml}</td><td>${range}</td><td>${fmtTime(k.lastCheckedAt)}</td><td><input class="auto-toggle" type="checkbox" data-auto="${k.id}" ${k.autoEnabled?'checked':''}></td><td><button class="btn btn-dark btn-sm" data-scan="${k.id}">Varrer</button> <button class="btn btn-ghost btn-sm" data-delete="${k.id}">×</button></td></tr>`;
+  }).join('')||'<tr><td colspan="9">Nenhuma palavra salva neste MLB.</td></tr>';
+  document.querySelectorAll('[data-scan]').forEach(b=>b.onclick=()=>{const k=keywords.find(x=>x.id===b.dataset.scan);if(k)scanOne(k)});
+  document.querySelectorAll('[data-hist]').forEach(b=>b.onclick=()=>{const k=keywords.find(x=>x.id===b.dataset.hist);if(k)selectKeyword(k)});
+  document.querySelectorAll('[data-auto]').forEach(b=>b.onchange=async()=>{const k=keywords.find(x=>x.id===b.dataset.auto);if(!k)return;const freq=Number($('autoFrequency').value||24);await updateDoc(doc(db,'users',uid,'ads',activeAd.mlb,'keywords',k.id),{autoEnabled:b.checked,frequencyHours:freq,nextScanAt:b.checked?new Date():null,updatedAt:serverTimestamp()});toast(b.checked?`Automação ligada: ${k.keyword}`:`Automação desligada: ${k.keyword}`)});
+  document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{const k=keywords.find(x=>x.id===b.dataset.delete);if(k&&confirm(`Excluir a palavra “${k.keyword}”?`))await deleteDoc(doc(db,'users',uid,'ads',activeAd.mlb,'keywords',k.id))});
+}
+
+function listenQueue(){
+  unsubQueue=onSnapshot(collection(db,'users',uid,'queue'),snap=>{
+    const arr=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>stamp(b.createdAt)-stamp(a.createdAt)).slice(0,14);
+    $('queueList').innerHTML=arr.map(q=>`<div class="queue-item ${q.status||'pending'}"><b>${esc(q.keyword||'')}</b> • ${esc(q.adId||'')}<br><span>${statusLabel(q.status)}${q.status==='running'&&q.progressPage?` • pág. ${q.progressPage} • ${q.progressChecked||0} verificados`:''}${q.finishedAt?' • '+fmtTime(q.finishedAt):''}${q.error?' • '+esc(q.error):''}</span></div>`).join('')||'<div class="subtle">Fila vazia.</div>';
+    const running=arr.filter(x=>x.status==='running'), pending=arr.filter(x=>x.status==='pending');
+    if(running.length){const q=running[0];$('robotBadge').textContent=`Chromium • pág. ${q.progressPage||1}`;$('statusTitle').textContent=`Pesquisando “${q.keyword}”`;$('statusText').textContent=`${q.progressChecked||0} resultados verificados.`;}
+    else if(pending.length){$('robotBadge').textContent=`Chromium • ${pending.length} na fila`;$('statusTitle').textContent='Pesquisa aguardando início';$('statusText').textContent='O pedido já está salvo no Firebase.';}
+    else{$('robotBadge').textContent='Chromium • fila limpa';$('statusTitle').textContent='Sistema pronto';$('statusText').textContent='Os resultados ficam salvos no Firebase com data e hora.';}
+  });
+}
+const statusLabel=s=>({pending:'aguardando',running:'pesquisando',done:'concluído',error:'erro'}[s]||s||'aguardando');
+
+async function selectKeyword(k){ selectedKeyword=k; $('historyTitle').textContent=k.keyword; const q=query(collection(db,'users',uid,'ads',activeAd.mlb,'keywords',k.id,'history'),orderBy('checkedAt','asc'),limit(100)); const snap=await getDocs(q); drawLineChart(snap.docs.map(d=>d.data())); }
+
+function num(v){const n=Number(v);return Number.isFinite(n)&&n>0?n:null}
+function renderMetrics(){ const found=keywords.map(k=>num(k.referenceOrganicPosition)).filter(Boolean); $('mBest').textContent=found.length?'#'+Math.min(...found):'—'; $('mAvg').textContent=found.length?'#'+Math.round(found.reduce((s,n)=>s+n,0)/found.length):'—'; $('mTop10').textContent=found.filter(n=>n<=10).length; const last=keywords.map(k=>k.lastCheckedAt).filter(Boolean).sort((a,b)=>stamp(b)-stamp(a))[0]; $('mLast').textContent=last?fmtTime(last):'—'; }
+
+function setupCanvas(canvas){ const dpr=Math.max(1,window.devicePixelRatio||1),rect=canvas.getBoundingClientRect(); const w=Math.max(500,rect.width||900),h=Math.max(270,rect.height||310); canvas.width=w*dpr;canvas.height=h*dpr;const c=canvas.getContext('2d');c.scale(dpr,dpr);return{c,w,h}; }
+function drawBarChart(){ const {c,w,h}=setupCanvas($('barChart'));c.clearRect(0,0,w,h); const data=keywords.map(k=>({k,val:num(k.referenceOrganicPosition)||num(k.referenceGeneralPosition),isAd:!num(k.referenceOrganicPosition)&&num(k.referenceAdsPosition)})).filter(x=>x.val).sort((a,b)=>a.val-b.val); if(!data.length)return emptyChart(c,w,h,'Sem medições para este MLB'); const pad={l:165,r:28,t:20,b:28},row=(h-pad.t-pad.b)/data.length,max=Math.max(10,...data.map(x=>x.val));c.font='12px Segoe UI';data.forEach((x,i)=>{const y=pad.t+i*row+row*.18,bh=Math.min(24,row*.56),bw=(w-pad.l-pad.r)*(x.val/max);c.fillStyle='#dfe8f5';c.textAlign='right';c.fillText(short(x.k.keyword,22),pad.l-10,y+bh*.72);c.fillStyle=x.isAd?'#ffb52e':'#20d66b';c.fillRect(pad.l,y,Math.max(3,bw),bh);c.fillStyle='#fff';c.textAlign='left';c.fillText('#'+x.val,pad.l+Math.max(5,bw)+6,y+bh*.72)});c.strokeStyle='#3a4d67';c.beginPath();c.moveTo(pad.l,pad.t-5);c.lineTo(pad.l,h-pad.b);c.stroke(); }
+function drawLineChart(hist){ const {c,w,h}=setupCanvas($('lineChart'));c.clearRect(0,0,w,h); const data=hist.map(x=>({...x,val:num(x.referenceOrganicPosition)||num(x.referenceGeneralPosition)||num(x.organicPosition)||num(x.generalPosition)})).filter(x=>x.val); if(!data.length)return emptyChart(c,w,h,'Sem histórico desta palavra'); const pad={l:48,r:24,t:22,b:36},max=Math.max(...data.map(x=>x.val)),min=Math.max(1,Math.min(...data.map(x=>x.val))-2),range=Math.max(1,max-min);c.strokeStyle='#30465f';c.fillStyle='#7890b0';c.font='11px Segoe UI';for(let i=0;i<5;i++){const y=pad.t+(h-pad.t-pad.b)*i/4,v=Math.round(min+range*i/4);c.beginPath();c.moveTo(pad.l,y);c.lineTo(w-pad.r,y);c.stroke();c.fillText('#'+v,6,y+4)}const pts=data.map((d,i)=>({x:pad.l+(w-pad.l-pad.r)*(data.length===1?.5:i/(data.length-1)),y:pad.t+(h-pad.t-pad.b)*(d.val-min)/range,d}));c.strokeStyle='#ffe600';c.lineWidth=2;c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.stroke();pts.forEach(p=>{c.fillStyle=num(p.d.referenceOrganicPosition)||num(p.d.organicPosition)?'#20d66b':'#ffb52e';c.beginPath();c.arc(p.x,p.y,4,0,Math.PI*2);c.fill()}); }
+function emptyChart(c,w,h,text){c.fillStyle='#6f88a8';c.font='14px Segoe UI';c.textAlign='center';c.fillText(text,w/2,h/2)}
+window.addEventListener('resize',()=>{if(activeAd){drawBarChart();if(selectedKeyword)selectKeyword(selectedKeyword)}});

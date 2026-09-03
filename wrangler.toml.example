@@ -1,0 +1,9 @@
+name = "xtask-ml-radar-trigger"
+main = "src/index.js"
+compatibility_date = "2026-09-03"
+
+[vars]
+FIREBASE_PROJECT_ID = "portifoleo-817ad"
+GITHUB_OWNER = "SEU_USUARIO_GITHUB"
+GITHUB_REPO = "SEU_REPOSITORIO_XTASK"
+ALLOWED_ORIGINS = "https://xtask.shop,https://www.xtask.shop"

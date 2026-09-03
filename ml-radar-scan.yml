@@ -1,0 +1,33 @@
+name: ML Radar Scanner
+on:
+  repository_dispatch:
+    types: [ml_radar_scan]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+permissions:
+  contents: read
+concurrency:
+  group: ml-radar-scanner
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar dependências do scanner
+        working-directory: scanner
+        run: npm install --no-audit --no-fund
+      - name: Instalar Chromium do Playwright
+        working-directory: scanner
+        run: npx playwright install --with-deps chromium
+      - name: Rodar varreduras pendentes
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TARGET_UID: ${{ github.event.client_payload.uid || '' }}
+          ML_MAX_PAGES: "50"
+        run: node scanner/scan.mjs

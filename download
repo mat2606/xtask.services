@@ -1,0 +1,4 @@
+node_modules/
+cloudflare-worker/wrangler.toml
+.env
+*.log

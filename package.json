@@ -1,0 +1,6 @@
+{
+  "name": "xtask-ml-radar-trigger",
+  "private": true,
+  "scripts": {"deploy":"wrangler deploy"},
+  "devDependencies": {"wrangler":"^4.32.0"}
+}

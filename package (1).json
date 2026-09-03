@@ -1,0 +1,9 @@
+{
+  "name": "xtask-ml-radar-scanner",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "playwright": "^1.55.0"
+  }
+}

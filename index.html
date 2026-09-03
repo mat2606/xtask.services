@@ -1,84 +1,163 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="XTask agiliza suas tarefas com execução manual, pesquisa e revisão. Economize tempo sem scripts ou automações.">
-  <meta name="theme-color" content="#725cff">
-  <meta property="og:type" content="website">
-  <meta property="og:locale" content="pt_BR">
-  <meta property="og:title" content="XTask | Mais tempo para você">
-  <meta property="og:description" content="Falta tempo? A XTask pesquisa, realiza e revisa cada tarefa manualmente. Sem scripts.">
-  <meta property="og:image" content="https://xtask.shop/social-preview.jpg">
-  <meta property="og:image:width" content="1408">
-  <meta property="og:image:height" content="768">
-  <meta property="og:image:type" content="image/jpeg">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="XTask | Mais tempo para você">
-  <meta name="twitter:description" content="Execução manual com pesquisa e revisão. Sem scripts ou automações.">
-  <meta name="twitter:image" content="https://xtask.shop/social-preview.jpg">
-  <title>XTask | Sala do Futuro</title>
-  <link id="siteFavicon" rel="icon" type="image/jpeg" href="favicon.jpg">
-  <link rel="apple-touch-icon" href="favicon.jpg">
-  <link rel="preconnect" href="https://www.gstatic.com">
-  <link rel="stylesheet" href="style.css?v=11">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1527" />
+  <title>Radar de Ranking — Xtask</title>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="announcement"><span></span><b id="announcement">Pedidos abertos • Atendimento todos os dias</b></div>
-  <header class="header">
-    <div class="shell header-inner">
-      <a class="brand" href="#inicio"><i>✓</i><strong id="brand">XTask</strong></a>
-      <nav id="menu"><a href="#metodo">Nosso método</a><a href="#servicos">Serviços</a><a href="#como-funciona">Como funciona</a><a href="#duvidas">Dúvidas</a></nav>
-      <div class="header-actions"><button class="icon-button" id="themeButton" type="button" aria-label="Alternar tema">☾</button><a class="button desktop-button" href="#servicos">Fazer pedido <span>→</span></a><button class="icon-button menu-button" id="menuButton" type="button" aria-label="Abrir menu">☰</button></div>
+  <div id="toast" class="toast"></div>
+
+  <section id="authView" class="auth-shell">
+    <div class="auth-card">
+      <div class="brand-row">
+        <div class="brand-icon">↗</div>
+        <div><h1>Radar de Ranking</h1><p>Xtask • Mercado Livre</p></div>
+      </div>
+      <div class="auth-note">Sem extensão. Sem Firebase Storage. As buscas rodam em Chromium no GitHub Actions e o histórico fica no Firestore.</div>
+      <label>E-mail</label>
+      <input id="authEmail" type="email" placeholder="seu@email.com" autocomplete="email" />
+      <label>Senha</label>
+      <input id="authPassword" type="password" placeholder="mínimo 6 caracteres" autocomplete="current-password" />
+      <div class="auth-actions">
+        <button id="loginBtn" class="btn btn-yellow">Entrar</button>
+        <button id="signupBtn" class="btn btn-dark">Criar conta</button>
+      </div>
+      <button id="guestBtn" class="btn btn-ghost full">Entrar como visitante neste navegador</button>
+      <small>Para sincronizar em vários dispositivos, use e-mail e senha.</small>
     </div>
-  </header>
+  </section>
 
-  <main>
-    <section class="hero shell" id="inicio">
-      <div class="hero-copy">
-        <span class="eyebrow" id="heroEyebrow">✦ ECONOMIZE TEMPO • EXECUÇÃO MANUAL</span>
-        <h1 id="heroTitle">Falta tempo? A XTask agiliza suas tarefas.</h1>
-        <p id="heroSubtitle">Enquanto você cuida do que importa, cada atividade é pesquisada, realizada e revisada manualmente. Sem robôs, sem automações e sem scripts.</p>
-        <div class="hero-actions"><a class="button large" href="#servicos">Ver serviços <span>→</span></a><small>● Resposta pelo WhatsApp</small></div>
-        <div class="proof"><div><i>✓</i><i>★</i><i>☺</i></div><p><strong>Mais tempo para a sua rotina</strong><br>Você pede; a XTask pesquisa e executa manualmente</p></div>
-      </div>
-      <div class="hero-visual">
-        <div class="grid-lines"></div>
-        <div class="browser-card">
-          <div class="browser-top"><i></i><i></i><i></i><small>xtask.shop</small></div>
-          <div class="browser-body"><span class="status">● Pedido recebido</span><div class="success-icon">✓</div><h2>Tudo certo por aqui.</h2><p>Seu pedido sobe no painel e a conversa continua no WhatsApp.</p><div class="progress"><i></i></div><div class="browser-notes"><span>◷ Pesquisa manual</span><span>♢ Sem scripts</span></div></div>
+  <div id="appView" class="app hidden">
+    <aside class="sidebar">
+      <a class="side-logo" href="/" title="Voltar ao Xtask">X</a>
+      <button class="side-btn active" title="Rankeamento">⌁</button>
+      <button class="side-btn" title="Pesquisa">⌕</button>
+      <button class="side-btn" title="Gráficos">▥</button>
+      <div class="side-spacer"></div>
+      <button id="logoutBtn" class="side-btn" title="Sair">↪</button>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">MERCADO LIVRE</div>
+          <h2>Radar de Rankeamento</h2>
+          <div id="userLine" class="subtle"></div>
         </div>
-        <div class="float-card one">✓ Pedido registrado</div><div class="float-card two">● WhatsApp direto</div>
-      </div>
-    </section>
+        <div class="top-actions">
+          <span id="cloudBadge" class="badge green">● Firebase</span>
+          <span id="robotBadge" class="badge purple">Chromium • aguardando</span>
+        </div>
+      </header>
 
-    <section class="trust"><div class="shell" id="seals"></div></section>
-    <section class="time-method shell" id="metodo">
-      <div class="time-copy"><span>SEU TEMPO DE VOLTA</span><h2>Menos tarefas acumuladas. Mais tempo para o que precisa de você.</h2><p>A falta de tempo pode transformar pequenas atividades em uma lista difícil de vencer. A XTask entra para facilitar, organizar e agilizar esse processo — sem esconder como o trabalho é feito.</p><div class="time-benefits"><article><i>◷</i><div><h3>Economize horas</h3><p>Libere tempo para estudo, trabalho, descanso e compromissos importantes.</p></div></article><article><i>✓</i><div><h3>Evite o acúmulo</h3><p>Reúna várias tarefas em um só pedido e acompanhe tudo de forma organizada.</p></div></article><article><i>→</i><div><h3>Ganhe agilidade</h3><p>Você envia as informações e recebe atendimento direto pelo WhatsApp.</p></div></article></div></div>
-      <aside class="manual-proof"><span class="manual-badge">SEM SCRIPTS • PROCESSO MANUAL</span><h3>Cada tarefa é analisada individualmente.</h3><p>O trabalho é feito à mão, com apoio de pesquisas para compreender o conteúdo e conferir as respostas.</p><ol><li><b>01</b><span><strong>Leitura</strong> da solicitação e das instruções</span></li><li><b>02</b><span><strong>Pesquisa</strong> para apoiar a resolução</span></li><li><b>03</b><span><strong>Execução manual</strong> de cada atividade</span></li><li><b>04</b><span><strong>Revisão</strong> antes da finalização</span></li></ol><strong class="no-script-note">Não usamos scripts, robôs ou automações para realizar as tarefas.</strong></aside>
-    </section>
-    <section class="services shell" id="servicos"><div class="section-head"><div><span>SERVIÇOS</span><h2>Escolha tudo o que você precisa</h2></div><p>Adicione vários serviços à mesma solicitação. Quando houver demonstração, assista ao vídeo do processo manual.</p></div><div class="service-grid" id="serviceGrid"></div></section>
-    <section class="steps" id="como-funciona"><div class="shell"><div class="section-head centered"><div><span>SEM COMPLICAÇÃO</span><h2>Do pedido ao atendimento em 3 passos</h2></div></div><div class="step-grid"><article><i>1</i><h3>Adicione os serviços</h3><p>Escolha opções diferentes e reúna tudo em um só pedido.</p></article><article><i>2</i><h3>Revise e envie</h3><p>Informe seus dados, prazo e observações para a análise manual.</p></article><article><i>3</i><h3>Confirme no WhatsApp</h3><p>O pedido é registrado e o atendimento manual começa após sua confirmação.</p></article></div></div></section>
-    <section class="faq shell" id="duvidas"><div><span>PERGUNTAS FREQUENTES</span><h2>Ficou com alguma dúvida?</h2><p>Aqui estão as respostas mais importantes antes de fazer seu pedido.</p></div><div id="faqList"></div></section>
-    <section class="final-cta shell"><div><span>PRONTO PARA COMEÇAR?</span><h2>Escolha seu serviço e faça o pedido agora.</h2></div><a class="button light" href="#servicos">Ver serviços →</a></section>
-  </main>
+      <section class="hero-strip">
+        <div>
+          <strong id="statusTitle">Sistema pronto</strong>
+          <span id="statusText">Selecione um MLB e mande varrer uma palavra ou todas.</span>
+        </div>
+        <div class="hero-actions">
+          <div class="runs-switch" title="3 varreduras reduz variações de sessão e usa a mediana">
+            <button class="run-chip active" data-runs="1">1x rápida</button>
+            <button class="run-chip" data-runs="3">3x mediana</button>
+          </div>
+          <button id="scanAllBtn" class="btn btn-purple">⚡ Varrer MLB selecionado</button>
+        </div>
+      </section>
 
-  <footer><div class="shell"><a class="brand" href="#inicio"><i>✓</i><strong id="footerBrand">XTask</strong></a><p>Pesquisa, execução manual e revisão. Sem scripts.</p><small>© <span id="year"></span> XTask</small></div></footer>
+      <section class="panel tracker-panel">
+        <div class="panel-title">＋ Rastrear anúncio em várias palavras</div>
+        <div class="tracker-grid">
+          <div>
+            <label>MLB ou link do anúncio</label>
+            <input id="mlbInput" placeholder="MLB4011660821 ou link completo" autocomplete="off" />
+          </div>
+          <div>
+            <label>Nome interno</label>
+            <input id="adNameInput" placeholder="Ex.: Kit Extrator de Cravos" />
+          </div>
+          <div class="action-cell"><button id="addAdBtn" class="btn btn-green">Salvar MLB</button></div>
+        </div>
+        <div class="divider"></div>
+        <div class="keyword-grid">
+          <div>
+            <label>Anúncio selecionado</label>
+            <select id="adSelect"></select>
+          </div>
+          <div>
+            <label>Palavras-chave — uma por linha</label>
+            <textarea id="keywordsInput" rows="3" placeholder="extrator de cravos\nkit extrator de cravos\nremovedor de cravos"></textarea>
+          </div>
+          <div class="action-cell"><button id="addKeywordsBtn" class="btn btn-green">Adicionar</button></div>
+        </div>
+      </section>
 
-  <div class="order-dock" id="orderDock" aria-live="polite"><div><span id="dockCount">0 itens adicionados</span><strong id="dockTotal">R$ 0,00</strong></div><button class="button" id="reviewOrder" type="button">Revisar pedido →</button></div>
+      <section class="metrics">
+        <article><span>Melhor orgânica</span><b id="mBest">—</b><small>menor posição orgânica</small></article>
+        <article><span>Média orgânica</span><b id="mAvg">—</b><small>palavras encontradas</small></article>
+        <article><span>Top 10</span><b id="mTop10">0</b><small>palavras orgânicas no Top 10</small></article>
+        <article><span>Última leitura</span><b id="mLast">—</b><small>data mais recente</small></article>
+      </section>
 
-  <div class="modal" id="addModal" aria-hidden="true"><div class="modal-backdrop" data-close-add></div><section class="modal-card compact" role="dialog" aria-modal="true" aria-labelledby="addModalTitle"><button class="modal-close" type="button" data-close-add aria-label="Fechar">×</button><div class="modal-head"><span>ADICIONAR AO PEDIDO</span><h2 id="addModalTitle">Serviço</h2><p>Escolha a opção e a quantidade desejada.</p></div><div class="field"><label>Opção do serviço</label><div id="optionList" class="option-list"></div></div><div class="quantity-row"><div><strong>Quantidade</strong><small>Você pode adicionar mais de uma unidade.</small></div><div class="quantity-control"><button id="quantityMinus" type="button" aria-label="Diminuir quantidade">−</button><input id="itemQuantity" type="number" min="1" max="99" value="1" aria-label="Quantidade"><button id="quantityPlus" type="button" aria-label="Aumentar quantidade">+</button></div></div><button class="button submit" id="addItem" type="button">Adicionar ao pedido →</button></section></div>
+      <section class="content-grid first-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <div><div class="panel-title">Anúncios salvos</div><div class="subtle">Clique em um MLB para abrir somente o histórico dele.</div></div>
+            <input id="filterInput" class="mini-input" placeholder="buscar MLB, nome ou palavra..." />
+          </div>
+          <div id="adsList" class="ads-list"></div>
+        </div>
 
-  <div class="modal" id="orderModal" aria-hidden="true"><div class="modal-backdrop" data-close-order></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="modal-close" type="button" data-close-order aria-label="Fechar">×</button><div class="modal-head"><span>PEDIDO ÚNICO</span><h2 id="modalTitle">Revise seu pedido</h2><p>Todos os serviços abaixo serão enviados juntos.</p></div><form id="orderForm"><div class="selected-items" id="selectedItems"></div><button class="add-more" id="addMore" type="button">＋ Adicionar outro serviço</button><div class="field-row"><div class="field"><label for="customerName">Seu nome</label><input id="customerName" maxlength="100" required placeholder="Como podemos chamar você?"></div><div class="field"><label for="customerWhatsapp">Seu WhatsApp</label><input id="customerWhatsapp" maxlength="20" inputmode="tel" required placeholder="(11) 99999-9999"></div></div><div class="field-row"><div class="field"><label for="studentRa">R.A. do aluno</label><input id="studentRa" maxlength="30" required autocomplete="off" placeholder="Digite o R.A. completo"></div><div class="field"><label for="studentPassword">Senha de acesso</label><div class="password-entry"><input id="studentPassword" type="password" maxlength="100" required autocomplete="off" placeholder="Digite a senha"><button id="toggleStudentPassword" type="button" aria-label="Mostrar ou ocultar senha">Mostrar</button></div></div></div><label class="access-consent"><input id="accessConsent" type="checkbox" required><span>Autorizo a XTask a acessar temporariamente a conta informada para realizar os serviços deste pedido.</span></label><div class="field"><label for="details">Detalhes do pedido</label><textarea id="details" maxlength="1500" placeholder="Matéria, prazo e outras informações..."></textarea></div><div class="coupon"><input id="coupon" maxlength="30" placeholder="CUPOM DE DESCONTO"><small id="couponMessage"></small></div><div class="summary"><span>Total do pedido</span><strong id="orderTotal">R$ 0,00</strong></div><button class="button submit" id="submitOrder" type="submit">Registrar pedido e continuar →</button><small class="privacy">♢ O R.A. e a senha ficam disponíveis somente no painel administrativo e não são enviados pelo WhatsApp.</small></form></section></div>
-  <div class="modal" id="successModal" aria-hidden="true"><div class="modal-backdrop" data-close-success></div><section class="modal-card compact order-success" role="dialog" aria-modal="true" aria-labelledby="successTitle"><button class="modal-close" type="button" data-close-success aria-label="Fechar">×</button><div class="success-icon">✓</div><div class="modal-head"><span>PEDIDO SALVO NO FIREBASE</span><h2 id="successTitle">Pedido registrado!</h2><p>Seu pedido <strong id="successCode"></strong> já está disponível no painel administrativo.</p></div><a class="button submit" id="successWhatsapp" href="#" target="_blank" rel="noopener">Continuar no WhatsApp →</a><small class="privacy">O WhatsApp só é aberto depois da confirmação do banco.</small></section></div>
-  <div class="toast" id="toast"></div>
+        <div class="panel chart-panel">
+          <div class="panel-head">
+            <div><div class="panel-title">Posição por palavra-chave</div><div id="chartSubtitle" class="subtle">Selecione um MLB.</div></div>
+          </div>
+          <canvas id="barChart"></canvas>
+          <div class="chart-help">Prioriza posição orgânica; quando não há orgânico, usa a posição geral encontrada em publicidade.</div>
+        </div>
+      </section>
 
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
-  <script src="firebase.js?v=11"></script>
-  <script src="data.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Palavras-chave do MLB selecionado</div>
+            <div class="subtle">Orgânico e publicidade são medidos separadamente. Clique no nome para abrir o histórico ou em Varrer para medir só ela.</div>
+          </div>
+          <button id="scanSelectedBtn" class="btn btn-yellow">Varrer todas deste MLB</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Palavra-chave</th><th>Geral</th><th>Orgânico</th><th>Ads</th><th>Variação</th><th>Faixa 3x</th><th>Verificado</th><th>Auto</th><th>Ação</th></tr>
+            </thead>
+            <tbody id="keywordsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="panel chart-panel">
+          <div class="panel-head">
+            <div><div class="panel-title">Evolução da palavra</div><div id="historyTitle" class="subtle">Clique em uma palavra na tabela.</div></div>
+          </div>
+          <canvas id="lineChart"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Fila e automação</div>
+          <div class="automation-box">
+            <label>Frequência padrão das palavras automáticas</label>
+            <select id="autoFrequency"><option value="6">a cada 6 horas</option><option value="12">a cada 12 horas</option><option value="24" selected>a cada 24 horas</option><option value="48">a cada 48 horas</option></select>
+            <div class="help">O botão Auto de cada palavra liga/desliga a medição programada. O GitHub Actions verifica horários pendentes de hora em hora.</div>
+          </div>
+          <div class="panel-title mt">Fila do robô</div>
+          <div id="queueList" class="queue-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
