@@ -1,33 +1,54 @@
 name: ML Radar Scanner
+
 on:
   repository_dispatch:
     types: [ml_radar_scan]
   workflow_dispatch:
   schedule:
     - cron: "17 * * * *"
+
 permissions:
   contents: read
+  id-token: write
+
 concurrency:
   group: ml-radar-scanner
   cancel-in-progress: false
+
 jobs:
   scan:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      GCP_PROJECT_ID: portifoleo-817ad
+      TARGET_UID: ${{ github.event.client_payload.uid || '' }}
+      ML_MAX_PAGES: "50"
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Autenticar no Google Cloud sem JSON
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: portifoleo-817ad
+          workload_identity_provider: projects/491048678096/locations/global/workloadIdentityPools/github/providers/xtask-services
+          service_account: github-ml-radar@portifoleo-817ad.iam.gserviceaccount.com
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - name: Instalar dependências do scanner
         working-directory: scanner
         run: npm install --no-audit --no-fund
+
       - name: Instalar Chromium do Playwright
         working-directory: scanner
         run: npx playwright install --with-deps chromium
+
       - name: Rodar varreduras pendentes
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          TARGET_UID: ${{ github.event.client_payload.uid || '' }}
-          ML_MAX_PAGES: "50"
         run: node scanner/scan.mjs

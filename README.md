@@ -1,12 +1,20 @@
-# Xtask ML Radar Web
+# Xtask ML Radar — GitHub Pages + Firebase Spark + GitHub OIDC
 
-Radar de ranking do Mercado Livre para integrar em `xtask.shop/radar/`.
+Versão sem extensão, sem Firebase Storage, sem Cloud Functions e **sem Service Account JSON**.
 
-Arquitetura:
+## Componentes
 
-- GitHub Pages: interface.
-- Firebase Spark: Authentication + Firestore. Sem Storage e sem Cloud Functions.
-- GitHub Actions + Playwright/Chromium: scanner real do Mercado Livre.
-- Cloudflare Worker Free: ponte segura opcional para disparar o Action imediatamente.
+- `radar/` — painel em `xtask.shop/radar/`
+- `scanner/` — Playwright/Chromium que pesquisa Mercado Livre
+- `.github/workflows/ml-radar-scan.yml` — scanner GitHub Actions
+- `setup-wif-cloud-shell.sh` — configuração única da autenticação GitHub → Google sem chave
+- `firestore.rules` — regras do frontend
+- `cloudflare-worker/` — acionador instantâneo opcional
 
-Leia `INTEGRAR-XTASK.md` para instalar.
+## Autenticação do scanner
+
+O GitHub Actions solicita um token OIDC temporário. O Google Workload Identity Federation aceita apenas execuções originadas do repositório `mat2606/xtask.services` e permite impersonar `github-ml-radar@portifoleo-817ad.iam.gserviceaccount.com`.
+
+Não existe `FIREBASE_SERVICE_ACCOUNT` e não existe arquivo de chave privada no repositório.
+
+Veja `INTEGRAR-XTASK.md`.

@@ -1,94 +1,79 @@
-# Integrar no xtask.shop
+# ML Radar no xtask.shop — SEM JSON
 
-Esta pasta foi feita para ser COPIADA para o repositório que já publica o `xtask.shop`.
+Esta versão substitui a anterior **nos mesmos caminhos**. Você pode extrair o ZIP e enviar o conteúdo para a raiz do repositório `mat2606/xtask.services`; os arquivos com o mesmo nome são atualizados.
 
-## Estrutura que entra no seu repositório
+## O que mudou
 
-- `radar/` → página do Radar. Depois do deploy: `https://xtask.shop/radar/`
-- `scanner/` → Chromium/Playwright que pesquisa o Mercado Livre no GitHub Actions
-- `.github/workflows/ml-radar-scan.yml` → executa o scanner
-- `firestore.rules` → regras para publicar no Firebase
-- `cloudflare-worker/` → acionador imediato opcional/recomendado
+- Não usa mais `FIREBASE_SERVICE_ACCOUNT`.
+- Não cria chave privada JSON.
+- GitHub Actions autentica no Google Cloud com OIDC / Workload Identity Federation.
+- O scanner usa `@google-cloud/firestore` com Application Default Credentials geradas temporariamente pelo workflow.
+- Firebase continua sem Storage e sem Cloud Functions.
+- O Radar visual em `radar/` foi preservado.
+- A lógica Chromium/Playwright do Mercado Livre foi preservada.
 
-O projeto NÃO usa Firebase Storage e NÃO usa Cloud Functions/Blaze.
+## 1. Substitua os arquivos antigos no GitHub
 
-## 1. Firebase Spark
+Extraia o ZIP e envie **o conteúdo inteiro** para a raiz do repositório atual.
 
-No projeto `portifoleo-817ad`:
+Os caminhos importantes são os mesmos:
 
-1. Authentication → Sign-in method → habilite `Email/Password`.
-2. Se quiser usar o botão Visitante, habilite também `Anonymous`.
-3. Authentication → Settings → Authorized domains → adicione `xtask.shop` (e `www.xtask.shop`, se usar).
-4. Crie o Cloud Firestore.
-5. Firestore → Rules → cole o conteúdo de `firestore.rules` e publique.
+- `radar/`
+- `scanner/`
+- `.github/workflows/ml-radar-scan.yml`
+- `cloudflare-worker/`
+- `firestore.rules`
 
-## 2. Secret do GitHub para o scanner
+Não coloque uma pasta externa `xtask-ml-radar-web-v2-sem-json/` dentro do repositório.
 
-Firebase Console → Project settings → Service accounts → Generate new private key.
+O secret antigo `FIREBASE_SERVICE_ACCOUNT`, se você chegou a criar, pode ser apagado depois; esta versão não o lê.
 
-No GitHub do Xtask:
-`Settings → Secrets and variables → Actions → New repository secret`
+## 2. Configuração única no Google Cloud, sem JSON
 
-Nome:
-`FIREBASE_SERVICE_ACCOUNT`
+Abra o Google Cloud Shell no projeto `portifoleo-817ad` e cole o conteúdo do arquivo:
 
-Valor: cole TODO o JSON da chave de serviço.
+`setup-wif-cloud-shell.sh`
 
-Nunca coloque esse JSON em arquivo público do repositório.
-
-## 3. Subir os arquivos
-
-Copie `radar/`, `scanner/`, `.github/workflows/ml-radar-scan.yml` e `firestore.rules` para o seu repositório atual.
-
-Se o GitHub Pages já publica o Xtask, não troque o workflow de deploy que você já usa. A pasta `radar` passa a ficar disponível em `/radar/` junto com o restante do site.
-
-## 4. Acionamento imediato (Cloudflare Worker Free)
-
-Sem o Worker, clicar em Varrer já salva a pesquisa no Firestore, mas ela será pega pelo workflow agendado (de hora em hora) ou por `Run workflow` manual.
-
-Com o Worker, o clique em Varrer dispara o GitHub Actions imediatamente.
-
-### Criar PAT do GitHub
-
-Crie um Fine-grained Personal Access Token limitado ao repositório do Xtask com:
-- Repository permission: `Contents: Read and write`
-
-### Publicar o Worker
-
-Entre na pasta `cloudflare-worker` e copie `wrangler.toml.example` para `wrangler.toml`.
-Preencha `GITHUB_OWNER` e `GITHUB_REPO`.
-
-Depois:
+Ou faça upload desse arquivo no Cloud Shell e execute:
 
 ```bash
-npm install
-npx wrangler login
-npx wrangler secret put GITHUB_PAT
-npm run deploy
+bash setup-wif-cloud-shell.sh
 ```
 
-O deploy mostra uma URL parecida com:
-`https://xtask-ml-radar-trigger.seuusuario.workers.dev`
+Ele cria:
 
-Cole essa URL em `radar/trigger-config.js`.
+- Service account `github-ml-radar@portifoleo-817ad.iam.gserviceaccount.com`
+- Workload Identity Pool `github`
+- Provider `xtask-services`
+- Vínculo restrito ao repositório `mat2606/xtask.services`
+- Permissão `roles/datastore.user` para o scanner ler/gravar Firestore
 
-## 5. Teste
+**Nenhuma chave privada é criada.**
 
-1. Abra `https://xtask.shop/radar/`
-2. Crie sua conta ou entre como visitante.
-3. Salve um MLB.
-4. Adicione uma palavra-chave.
-5. Selecione `1x rápida` e clique `Varrer`.
-6. A fila deve mudar: aguardando → pesquisando → concluído.
-7. Teste `3x mediana`: o robô abre 3 sessões limpas e salva a mediana para reduzir a oscilação de ranking.
+## 3. Teste
 
-## Como a posição é calculada
+No GitHub:
 
-O Chromium usa um contexto novo, sem login/cookies da sua conta, com viewport e localização fixos. Ele passa pelos resultados reais do Mercado Livre e diferencia cards marcados como `Ad/Patrocinado/Publicidade`.
+`Actions → ML Radar Scanner → Run workflow`
 
-- Geral: posição contando todos os cards.
-- Orgânico: posição contando somente os cards não patrocinados.
-- Ads: posição do anúncio entre os cards pagos, quando ele aparece como publicidade.
-- 3x mediana: repete em três sessões limpas e usa a mediana.
+O workflow deve passar pela etapa:
 
-Se o anúncio aparecer primeiro como Ad, o scanner continua até encontrar a ocorrência orgânica. Assim as duas métricas não são misturadas.
+`Autenticar no Google Cloud sem JSON`
+
+Depois ele instala o Chromium e executa as filas do Firestore.
+
+Na primeira configuração, permissões IAM podem levar alguns minutos para propagar.
+
+## 4. Site
+
+O site continua em:
+
+`https://xtask.shop/radar/`
+
+A interface continua usando Firebase Web SDK para login e Firestore. Isso não exige chave privada; a `apiKey` web do Firebase não é uma service-account key.
+
+## 5. Cloudflare Worker
+
+O Worker de acionamento imediato continua opcional e não usa a chave JSON do Firebase Admin. Ele valida o ID Token do usuário e dispara o GitHub Actions.
+
+Sem Worker, o botão salva a fila no Firestore e o workflow agendado/manual a processa.
