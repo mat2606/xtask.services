@@ -1,7 +1,0 @@
-node_modules/
-cloudflare-worker/wrangler.toml
-.env
-*.log
-
-# Credenciais temporárias geradas por google-github-actions/auth
-gha-creds-*.json
